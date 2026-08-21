@@ -1,0 +1,10 @@
+{
+  "pattern": "src/**/*.{ts,tsx}",
+  "ignore": ["**/*-api.d.ts", "**/*.spec.ts", "**/*.spec.tsx", "**/node_modules/**"],
+  "format": ["typescript", "tsx"],
+  "threshold": 5,
+  "minLines": 8,
+  "minTokens": 70,
+  "reporters": ["consoleFull"],
+  "gitignore": true
+}

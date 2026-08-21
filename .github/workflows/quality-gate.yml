@@ -1,0 +1,110 @@
+name: 🚀 Quality Gate (reusable)
+
+# Workflow reutilizável — os projetos chamam com:
+#   uses: penzack-homebroker/quality-gates/.github/workflows/quality-gate.yml@v0.1.0
+# Ver README para o exemplo completo de adoção.
+
+on:
+  workflow_call:
+    inputs:
+      node-version-file:
+        description: 'Arquivo com a versão do Node (padrão .nvmrc)'
+        type: string
+        default: '.nvmrc'
+      pr-title-pattern:
+        description: 'Regex (grep -E) que o título do PR deve satisfazer'
+        type: string
+        default: '^(test|fix|feat|chore|refactor|sync)'
+      timezone:
+        description: 'Timezone do runner (testes sensíveis a data/hora)'
+        type: string
+        default: 'America/Sao_Paulo'
+      run-typecheck:
+        type: boolean
+        default: true
+      run-dup:
+        type: boolean
+        default: true
+      run-knip:
+        type: boolean
+        default: true
+      run-tests:
+        type: boolean
+        default: true
+    secrets:
+      NPM_TOKEN:
+        description: 'Token para o registry @penzack (opcional)'
+        required: false
+
+jobs:
+  pr-title:
+    name: 🏷️ PR Title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR title prefix
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PATTERN: ${{ inputs.pr-title-pattern }}
+        run: |
+          if echo "$PR_TITLE" | grep -qE "$PATTERN"; then
+            echo "PR title OK: $PR_TITLE"
+          else
+            echo "::error::PR title must match '$PATTERN'. Got: $PR_TITLE"
+            exit 1
+          fi
+
+  quality:
+    name: ✅ Typecheck, Lint, Duplication, Dead Code & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ inputs.node-version-file }}
+          cache: yarn
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 🔑 Authenticate with npm (only when NPM_TOKEN is provided)
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -n "$NPM_TOKEN" ]; then
+            echo "@penzack:registry=https://registry.npmjs.org" >> ${{ github.workspace }}/.npmrc
+            echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ${{ github.workspace }}/.npmrc
+          else
+            echo "NPM_TOKEN not provided — skipping registry auth"
+          fi
+
+      - name: 📦 Install Dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: 🌐 Set timezone
+        run: sudo timedatectl set-timezone ${{ inputs.timezone }}
+
+      - name: 🧮 Type Check
+        if: inputs.run-typecheck
+        run: yarn typecheck
+
+      - name: 🧹 Lint (baseline em eslint-suppressions.json — violação nova falha)
+        run: yarn lint
+
+      - name: 👯 Code Duplication (jscpd, threshold ratchet)
+        if: inputs.run-dup
+        run: yarn dup
+
+      - name: 💀 Dead Code — unused dependencies (knip)
+        if: inputs.run-knip
+        run: yarn knip
+
+      - name: 💀 Dead Code — full report (não-bloqueante)
+        if: inputs.run-knip
+        run: yarn knip:full
+        continue-on-error: true
+
+      - name: ✅ Run Unit Tests
+        if: inputs.run-tests
+        run: yarn test

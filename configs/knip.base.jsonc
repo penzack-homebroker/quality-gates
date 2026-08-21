@@ -1,0 +1,16 @@
+{
+  // Base de referência para projetos Next.js — COPIE para o projeto e ajuste.
+  // knip não tem mecanismo de extends; cada projeto mantém seu knip.jsonc,
+  // mas a estrutura e as regras de adoção (ver README) são as mesmas na org.
+  "entry": [
+    "src/app/**/{page,layout,loading,error,not-found,global-error,route,template,default}.tsx",
+    "src/app/**/route.ts",
+    // Mocks/fixtures referenciados via resolve.alias no vitest.config
+    "src/tests/**/*.{ts,tsx}"
+  ],
+  "project": ["src/**/*.{ts,tsx}"],
+  // BASELINE (ratchet manual): liste aqui as deps sem uso detectável no momento
+  // da adoção, com comentário explicando cada uma. Nunca adicionar entradas
+  // novas — dep nova sem uso deve falhar o gate.
+  "ignoreDependencies": []
+}

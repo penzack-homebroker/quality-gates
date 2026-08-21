@@ -1,0 +1,29 @@
+{
+  "name": "@penzack/quality-gates",
+  "version": "0.1.0",
+  "description": "Shared code-quality gates for Penzack frontend projects: ESLint rules, jscpd/knip base configs and a reusable GitHub quality workflow",
+  "type": "module",
+  "main": "eslint/index.mjs",
+  "exports": {
+    ".": "./eslint/index.mjs",
+    "./jscpd": "./configs/jscpd.base.json",
+    "./knip": "./configs/knip.base.jsonc"
+  },
+  "files": [
+    "eslint",
+    "configs",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/penzack-homebroker/quality-gates.git"
+  },
+  "dependencies": {
+    "eslint-plugin-sonarjs": "^4.2.0"
+  },
+  "peerDependencies": {
+    "eslint": ">=9.24.0"
+  },
+  "license": "UNLICENSED",
+  "private": false
+}
