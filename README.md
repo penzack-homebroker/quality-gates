@@ -27,10 +27,12 @@ Referência de implantação completa: HomeBroker FrontEnd (primeiro projeto a a
 ### 1. Instalar (dependência git, sem registry)
 
 ```bash
-yarn add -D "@penzack/quality-gates@github:penzack-homebroker/quality-gates#v0.1.0" eslint-plugin-sonarjs jscpd knip
+yarn add -D "@penzack/quality-gates@git+https://github.com/penzack-homebroker/quality-gates.git#v0.1.1" eslint-plugin-sonarjs jscpd knip
 ```
 
-> Fixe sempre numa tag (`#v0.1.0`) — atualizar a régua da org = bump da tag no projeto.
+> Fixe sempre numa tag (`#v0.1.1`) — atualizar a régua da org = bump da tag no projeto.
+
+> **Por que HTTPS e não SSH:** este repositório é público — não há nada sigiloso nele (regras de lint e YAML de CI) — então o clone via HTTPS funciona sem credencial em qualquer runner: GitHub Actions, Vercel, Netlify, máquina de dev. Com URL SSH ou repositório privado, cada plataforma de build passaria a exigir credencial própria (a Vercel, por exemplo, não lê secrets do GitHub Actions).
 
 ### 2. ESLint (flat config, ESLint ≥ 9.24)
 
@@ -84,7 +86,7 @@ on:
 
 jobs:
   quality:
-    uses: penzack-homebroker/quality-gates/.github/workflows/quality-gate.yml@v0.1.0
+    uses: penzack-homebroker/quality-gates/.github/workflows/quality-gate.yml@v0.1.1
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 ```
@@ -94,5 +96,5 @@ Inputs opcionais: `node-version-file` (padrão `.nvmrc`), `pr-title-pattern`, `t
 ## Governança
 
 - **Mudar a régua da org** (threshold de complexidade, regras novas): PR aqui + release de tag nova. Projetos adotam no seu ritmo, via bump da tag.
-- **Versionamento:** tags semânticas (`v0.1.0`). Regra nova ou threshold mais apertado = minor; correção = patch.
+- **Versionamento:** tags semânticas (`v0.1.1`). Regra nova ou threshold mais apertado = minor; correção = patch.
 - **Baselines são por projeto** e vivem em cada repo — este repositório define a régua, não a dívida de cada um.

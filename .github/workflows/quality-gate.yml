@@ -1,7 +1,7 @@
 name: 🚀 Quality Gate (reusable)
 
 # Workflow reutilizável — os projetos chamam com:
-#   uses: penzack-homebroker/quality-gates/.github/workflows/quality-gate.yml@v0.1.0
+#   uses: penzack-homebroker/quality-gates/.github/workflows/quality-gate.yml@v0.1.1
 # Ver README para o exemplo completo de adoção.
 
 on:
@@ -34,9 +34,6 @@ on:
     secrets:
       NPM_TOKEN:
         description: 'Token para o registry @penzack (opcional)'
-        required: false
-      GIT_DEPS_TOKEN:
-        description: 'PAT com read nos repos privados da org — necessário quando o projeto tem dependências git privadas (ex.: @penzack/quality-gates)'
         required: false
 
 jobs:
@@ -80,17 +77,6 @@ jobs:
             echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ${{ github.workspace }}/.npmrc
           else
             echo "NPM_TOKEN not provided — skipping registry auth"
-          fi
-
-      - name: 🔐 Git auth for private git dependencies (only when GIT_DEPS_TOKEN is provided)
-        env:
-          GIT_DEPS_TOKEN: ${{ secrets.GIT_DEPS_TOKEN }}
-        run: |
-          if [ -n "$GIT_DEPS_TOKEN" ]; then
-            git config --global url."https://x-access-token:${GIT_DEPS_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
-            git config --global url."https://x-access-token:${GIT_DEPS_TOKEN}@github.com/".insteadOf "git@github.com:"
-          else
-            echo "GIT_DEPS_TOKEN not provided — skipping git deps auth"
           fi
 
       - name: 📦 Install Dependencies
