@@ -93,6 +93,19 @@ jobs:
 
 Inputs opcionais: `node-version-file` (padrão `.nvmrc`), `pr-title-pattern`, `timezone`, e flags `run-typecheck` / `run-dup` / `run-knip` / `run-tests` para desligar gates que o projeto ainda não adotou.
 
+### 7. Required status checks (rulesets)
+
+O workflow reutilizável publica **dois** checks. Se o repositório exige status checks (Settings → Rules → Rulesets), registre exatamente estes contextos, pelo app *GitHub Actions*:
+
+```
+quality / 🏷️ PR Title
+quality / ✅ Typecheck, Lint, Duplication, Dead Code & Tests
+```
+
+O prefixo `quality` é o **id do job no workflow do projeto** (`jobs.quality`), e o restante é o `name:` de cada job aqui. Ao adotar, remova das regras o check do workflow antigo que foi substituído — um contexto exigido que ninguém mais reporta deixa todo PR travado em *"Expected — Waiting for status to be reported"*.
+
+> **Cuidado ao renomear:** mudar o `name:` dos jobs deste repositório altera esses contextos e quebra em silêncio o ruleset de cada projeto que os exige. Trate-os como contrato público — renomear exige avisar os adotantes e atualizar as regras junto.
+
 ## Governança
 
 - **Mudar a régua da org** (threshold de complexidade, regras novas): PR aqui + release de tag nova. Projetos adotam no seu ritmo, via bump da tag.
