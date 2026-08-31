@@ -18,7 +18,7 @@ Referência de implantação completa: HomeBroker FrontEnd (primeiro projeto a a
 | Duplicação | `jscpd` | Threshold por projeto (ratchet — só desce; alvo 3%) |
 | Código morto | `knip` | Dependência nova sem uso falha; arquivos órfãos em report não-bloqueante |
 | Testes | Vitest | Suíte completa verde |
-| Título de PR | CI | Prefixo `test\|fix\|feat\|chore\|refactor\|sync` |
+| Título de PR | CI | Prefixo `test\|fix\|feat\|chore\|refactor\|sync\|deploy\|hotfix` (case-insensitive) |
 
 **Filosofia baseline + ratchet:** ao adotar, as violações existentes são congeladas (`eslint-suppressions.json`, `ignoreDependencies` do knip, threshold do jscpd calibrado logo acima do nível atual). Código novo é julgado pela régua cheia; a dívida só pode diminuir. **Nunca adicione supressões manualmente.**
 
@@ -27,10 +27,10 @@ Referência de implantação completa: HomeBroker FrontEnd (primeiro projeto a a
 ### 1. Instalar (dependência git, sem registry)
 
 ```bash
-yarn add -D "@penzack/quality-gates@git+https://github.com/penzack-homebroker/quality-gates.git#v0.1.1" eslint-plugin-sonarjs jscpd knip
+yarn add -D "@penzack/quality-gates@git+https://github.com/penzack-homebroker/quality-gates.git#v0.2.0" eslint-plugin-sonarjs jscpd knip
 ```
 
-> Fixe sempre numa tag (`#v0.1.1`) — atualizar a régua da org = bump da tag no projeto.
+> Fixe sempre numa tag (`#v0.2.0`) — atualizar a régua da org = bump da tag no projeto.
 
 > **Por que HTTPS e não SSH:** este repositório é público — não há nada sigiloso nele (regras de lint e YAML de CI) — então o clone via HTTPS funciona sem credencial em qualquer runner: GitHub Actions, Vercel, Netlify, máquina de dev. Com URL SSH ou repositório privado, cada plataforma de build passaria a exigir credencial própria (a Vercel, por exemplo, não lê secrets do GitHub Actions).
 
@@ -86,7 +86,7 @@ on:
 
 jobs:
   quality:
-    uses: penzack-homebroker/quality-gates/.github/workflows/quality-gate.yml@v0.1.1
+    uses: penzack-homebroker/quality-gates/.github/workflows/quality-gate.yml@v0.2.0
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 ```
@@ -109,5 +109,5 @@ O prefixo `quality` é o **id do job no workflow do projeto** (`jobs.quality`), 
 ## Governança
 
 - **Mudar a régua da org** (threshold de complexidade, regras novas): PR aqui + release de tag nova. Projetos adotam no seu ritmo, via bump da tag.
-- **Versionamento:** tags semânticas (`v0.1.1`). Regra nova ou threshold mais apertado = minor; correção = patch.
+- **Versionamento:** tags semânticas (`v0.2.0`). Regra nova ou threshold mais apertado = minor; correção = patch.
 - **Baselines são por projeto** e vivem em cada repo — este repositório define a régua, não a dívida de cada um.

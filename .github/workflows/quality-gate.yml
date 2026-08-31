@@ -12,9 +12,9 @@ on:
         type: string
         default: '.nvmrc'
       pr-title-pattern:
-        description: 'Regex (grep -E) que o título do PR deve satisfazer'
+        description: 'Regex (grep -iE, case-insensitive) que o título do PR deve satisfazer'
         type: string
-        default: '^(test|fix|feat|chore|refactor|sync)'
+        default: '^(test|fix|feat|chore|refactor|sync|deploy|hotfix)'
       timezone:
         description: 'Timezone do runner (testes sensíveis a data/hora)'
         type: string
@@ -47,10 +47,10 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PATTERN: ${{ inputs.pr-title-pattern }}
         run: |
-          if echo "$PR_TITLE" | grep -qE "$PATTERN"; then
+          if echo "$PR_TITLE" | grep -qiE "$PATTERN"; then
             echo "PR title OK: $PR_TITLE"
           else
-            echo "::error::PR title must match '$PATTERN'. Got: $PR_TITLE"
+            echo "::error::PR title must match '$PATTERN' (case-insensitive). Got: $PR_TITLE"
             exit 1
           fi
 
