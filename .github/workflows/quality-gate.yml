@@ -47,10 +47,12 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PATTERN: ${{ inputs.pr-title-pattern }}
         run: |
-          if echo "$PR_TITLE" | grep -qiE "$PATTERN"; then
-            echo "PR title OK: $PR_TITLE"
+          # espaços nas bordas são invisíveis na UI do GitHub, mas quebram o ^ do regex
+          TITLE="$(echo "$PR_TITLE" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
+          if echo "$TITLE" | grep -qiE "$PATTERN"; then
+            echo "PR title OK: $TITLE"
           else
-            echo "::error::PR title must match '$PATTERN' (case-insensitive). Got: $PR_TITLE"
+            echo "::error::PR title must match '$PATTERN' (case-insensitive, whitespace-trimmed). Got: '$TITLE'"
             exit 1
           fi
 
