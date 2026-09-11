@@ -19,6 +19,10 @@ on:
         description: 'Timezone do runner (testes sensíveis a data/hora)'
         type: string
         default: 'America/Sao_Paulo'
+      run-pr-title:
+        description: 'Desligue quando o projeto tem validador de título próprio'
+        type: boolean
+        default: true
       run-typecheck:
         type: boolean
         default: true
@@ -39,7 +43,7 @@ on:
 jobs:
   pr-title:
     name: 🏷️ PR Title
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && inputs.run-pr-title
     runs-on: ubuntu-latest
     steps:
       - name: Validate PR title prefix
