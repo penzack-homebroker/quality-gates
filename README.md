@@ -27,10 +27,10 @@ Referência de implantação completa: HomeBroker FrontEnd (primeiro projeto a a
 ### 1. Instalar (dependência git, sem registry)
 
 ```bash
-yarn add -D "@penzack/quality-gates@git+https://github.com/penzack-homebroker/quality-gates.git#v0.3.0" eslint-plugin-sonarjs jscpd knip
+yarn add -D "@penzack/quality-gates@git+https://github.com/penzack-homebroker/quality-gates.git#v0.4.0" eslint-plugin-sonarjs jscpd knip
 ```
 
-> Fixe sempre numa tag (`#v0.3.0`) — atualizar a régua da org = bump da tag no projeto.
+> Fixe sempre numa tag (`#v0.4.0`) — atualizar a régua da org = bump da tag no projeto.
 
 > **Por que HTTPS e não SSH:** este repositório é público — não há nada sigiloso nele (regras de lint e YAML de CI) — então o clone via HTTPS funciona sem credencial em qualquer runner: GitHub Actions, Vercel, Netlify, máquina de dev. Com URL SSH ou repositório privado, cada plataforma de build passaria a exigir credencial própria (a Vercel, por exemplo, não lê secrets do GitHub Actions).
 
@@ -86,12 +86,14 @@ on:
 
 jobs:
   quality:
-    uses: penzack-homebroker/quality-gates/.github/workflows/quality-gate.yml@v0.3.0
+    uses: penzack-homebroker/quality-gates/.github/workflows/quality-gate.yml@v0.4.0
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 ```
 
 Inputs opcionais: `node-version-file` (padrão `.nvmrc`), `pr-title-pattern`, `timezone`, e flags `run-pr-title` (desligue quando o projeto tem validador de título próprio) / `run-typecheck` / `run-dup` / `run-knip` / `run-tests` para desligar gates que o projeto ainda não adotou.
+
+**Pacote privado `@penzack-homebroker/platform-kit` (GitHub Packages):** o projeto versiona um `.npmrc` com `@penzack-homebroker:registry=https://npm.pkg.github.com` e `//npm.pkg.github.com/:_authToken=${NPM_TOKEN}`. O job exporta `NPM_TOKEN` para todos os passos (o Yarn 1 interpola o `.npmrc` em qualquer comando) usando, nesta ordem: o secret `NPM_TOKEN` do repositório, se existir, ou o `GITHUB_TOKEN` do próprio workflow. Para o `GITHUB_TOKEN` bastar, conceda acesso de leitura ao repositório em *Packages → platform-kit → Package settings → Manage Actions access*; caso contrário cadastre o secret `NPM_TOKEN` com um PAT clássico `read:packages` + `repo`. Projetos sem o pacote não precisam de nada.
 
 ### 7. Required status checks (rulesets)
 
@@ -109,5 +111,5 @@ O prefixo `quality` é o **id do job no workflow do projeto** (`jobs.quality`), 
 ## Governança
 
 - **Mudar a régua da org** (threshold de complexidade, regras novas): PR aqui + release de tag nova. Projetos adotam no seu ritmo, via bump da tag.
-- **Versionamento:** tags semânticas (`v0.3.0`). Regra nova ou threshold mais apertado = minor; correção = patch.
+- **Versionamento:** tags semânticas (`v0.4.0`). Regra nova ou threshold mais apertado = minor; correção = patch.
 - **Baselines são por projeto** e vivem em cada repo — este repositório define a régua, não a dívida de cada um.

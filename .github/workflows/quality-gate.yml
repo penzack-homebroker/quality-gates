@@ -1,7 +1,7 @@
 name: 🚀 Quality Gate (reusable)
 
 # Workflow reutilizável — os projetos chamam com:
-#   uses: penzack-homebroker/quality-gates/.github/workflows/quality-gate.yml@v0.1.1
+#   uses: penzack-homebroker/quality-gates/.github/workflows/quality-gate.yml@v0.4.0
 # Ver README para o exemplo completo de adoção.
 
 on:
@@ -37,7 +37,7 @@ on:
         default: true
     secrets:
       NPM_TOKEN:
-        description: 'Token para o registry @penzack (opcional)'
+        description: 'Token de leitura do GitHub Packages (@penzack-homebroker). Opcional: sem ele o job usa o GITHUB_TOKEN do repositório chamador, que basta quando o pacote concede acesso ao repo em "Manage Actions access".'
         required: false
 
 jobs:
@@ -63,6 +63,11 @@ jobs:
   quality:
     name: ✅ Typecheck, Lint, Duplication, Dead Code & Tests
     runs-on: ubuntu-latest
+    # Os projetos versionam um `.npmrc` com `//npm.pkg.github.com/:_authToken=${NPM_TOKEN}` para o
+    # pacote privado @penzack-homebroker/platform-kit. O Yarn 1 interpola essa variável em TODO
+    # comando, então ela fica no escopo do job inteiro (install, lint, testes...).
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN || github.token }}
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
@@ -72,18 +77,6 @@ jobs:
         with:
           node-version-file: ${{ inputs.node-version-file }}
           cache: yarn
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: 🔑 Authenticate with npm (only when NPM_TOKEN is provided)
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ -n "$NPM_TOKEN" ]; then
-            echo "@penzack:registry=https://registry.npmjs.org" >> ${{ github.workspace }}/.npmrc
-            echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ${{ github.workspace }}/.npmrc
-          else
-            echo "NPM_TOKEN not provided — skipping registry auth"
-          fi
 
       - name: 📦 Install Dependencies
         run: yarn install --frozen-lockfile
