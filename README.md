@@ -8,6 +8,35 @@ Validações de qualidade de código compartilhadas entre os projetos frontend d
 
 Referência de implantação completa: HomeBroker FrontEnd (primeiro projeto a adotar — veja a seção *Quality Gates* do README de lá).
 
+## Triagem de erros do Sentry por IA (`sentry-triage.yml`)
+
+Workflow reutilizável disparado pelo relay [`sentry-ops`](https://github.com/penzack-homebroker/sentry-ops)
+(`repository_dispatch: sentry-triage`) ou à mão. Roda o
+[`claude-code-action`](https://github.com/anthropics/claude-code-action) com o Sentry MCP no
+repositório do app: lê o issue, analisa o código, grava `triage-result.json` (schema em
+`scripts/sentry-triage/triage-result.schema.json`) e passos determinísticos publicam o diagnóstico
+como comentário no issue e em `#sentry-ai-triage`. PR rascunho `fix/sentry-<id>-<slug>` só quando a
+correção é pequena e a confiança é alta.
+
+```yaml
+# .github/workflows/sentry-triage.yml no app
+on:
+  repository_dispatch: { types: [sentry-triage] }
+  workflow_dispatch: { inputs: { issue_id: { required: true, type: string }, dry_run: { type: boolean, default: true } } }
+concurrency: { group: sentry-triage-${{ github.event.client_payload.issue_id || inputs.issue_id }}, cancel-in-progress: false }
+permissions: { contents: write, pull-requests: write, issues: write, id-token: write }
+jobs:
+  triage:
+    uses: penzack-homebroker/quality-gates/.github/workflows/sentry-triage.yml@v0.5.0
+    with: { app: trader, default_branch: develop, sentry_project: homebroker-frontend, issue_id: ${{ github.event.client_payload.issue_id || inputs.issue_id }}, dry_run: ${{ inputs.dry_run || false }} }
+    secrets: { ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}, SENTRY_ACCESS_TOKEN: ${{ secrets.SENTRY_ACCESS_TOKEN }}, DISCORD_WEBHOOK_AI: ${{ secrets.DISCORD_WEBHOOK_AI }}, DISCORD_WEBHOOK_TEST: ${{ secrets.DISCORD_WEBHOOK_TEST }}, NPM_TOKEN: ${{ secrets.NPM_TOKEN }} }
+```
+
+Guardas: `concurrency` por issue, `already-triaged.mjs` (branch ou comentário `[sentry-triage]`
+existentes), `--max-turns`, `timeout-minutes: 25`, lista fechada de ferramentas (sem `gh pr create`
+em dry run). Segredos do Discord e do Sentry só aparecem nos passos determinísticos; o agente só vê
+o token do Sentry dentro do processo do MCP.
+
 ## Os gates
 
 | Gate | Ferramenta | Regra |

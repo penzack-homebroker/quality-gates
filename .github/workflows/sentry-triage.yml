@@ -1,0 +1,216 @@
+name: 🩺 Sentry Triage (reusable)
+
+# Workflow reutilizável — os fronts chamam com:
+#   uses: penzack-homebroker/quality-gates/.github/workflows/sentry-triage.yml@v0.5.0
+# Disparado pelo relay `sentry-ops` (repository_dispatch `sentry-triage`) ou à mão (workflow_dispatch).
+# O agente lê o issue pelo Sentry MCP, analisa o código do repo e grava `triage-result.json`;
+# passos determinísticos publicam o resultado no issue (comentário) e no Discord. Só esses passos
+# vêem os webhooks e o token do Sentry.
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        description: 'trader | affiliates | backoffice'
+        type: string
+        required: true
+      default_branch:
+        description: 'Branch base do PR rascunho (HB: develop; Aff/BKO: main)'
+        type: string
+        required: true
+      sentry_org:
+        type: string
+        default: 'penzack'
+      sentry_project:
+        type: string
+        required: true
+      issue_id:
+        type: string
+        required: true
+      severity:
+        type: string
+        default: 'P1'
+      platform:
+        type: string
+        default: ''
+      environment:
+        type: string
+        default: 'production'
+      release:
+        type: string
+        default: ''
+      web_url:
+        type: string
+        default: ''
+      title:
+        type: string
+        default: ''
+      dry_run:
+        description: 'Sem PR, sem comentário no Sentry; Discord vai para o canal de teste'
+        type: boolean
+        default: false
+      model:
+        type: string
+        default: 'claude-opus-5-5'
+      max_turns:
+        type: number
+        default: 40
+      node-version-file:
+        type: string
+        default: '.nvmrc'
+    secrets:
+      ANTHROPIC_API_KEY:
+        required: true
+      SENTRY_ACCESS_TOKEN:
+        description: 'Token da internal integration (org:read project:read project:write team:read event:write) — serve MCP e REST'
+        required: true
+      DISCORD_WEBHOOK_AI:
+        required: true
+      DISCORD_WEBHOOK_TEST:
+        required: false
+      TRIAGE_GITHUB_TOKEN:
+        description: 'Opcional: PAT fine-grained para push/PR quando o Claude GitHub App não está instalado'
+        required: false
+      NPM_TOKEN:
+        required: false
+
+jobs:
+  triage:
+    name: 🩺 ${{ inputs.severity }} · ${{ inputs.app }} · issue ${{ inputs.issue_id }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN || github.token }}
+      ISSUE_ID: ${{ inputs.issue_id }}
+      SENTRY_ORG: ${{ inputs.sentry_org }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      DISCORD_WEBHOOK_URL: ${{ inputs.dry_run && secrets.DISCORD_WEBHOOK_TEST || secrets.DISCORD_WEBHOOK_AI }}
+    steps:
+      - name: 📥 Checkout do app (${{ inputs.default_branch }}, histórico completo)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.default_branch }}
+          fetch-depth: 0
+
+      - name: 📥 Scripts de triagem (mesma versão deste workflow)
+        uses: actions/checkout@v4
+        with:
+          repository: penzack-homebroker/quality-gates
+          ref: ${{ github.job_workflow_sha }}
+          path: .quality-gates
+
+      - name: 🔎 Já triado? (branch fix/sentry-<id>-* ou comentário [sentry-triage])
+        id: guard
+        env:
+          SENTRY_ACCESS_TOKEN: ${{ secrets.SENTRY_ACCESS_TOKEN }}
+        run: node .quality-gates/scripts/sentry-triage/already-triaged.mjs
+
+      - name: 💬 Discord — duplicado, ignorado
+        if: steps.guard.outputs.skip == 'true'
+        env:
+          TRIAGE_APP: ${{ inputs.app }}
+          TRIAGE_SEVERITY: ${{ inputs.severity }}
+          TRIAGE_WEB_URL: ${{ inputs.web_url }}
+          SKIP_REASON: ${{ steps.guard.outputs.reason }}
+        run: node .quality-gates/scripts/sentry-triage/post-discord.mjs
+
+      - name: 🔧 Node
+        if: steps.guard.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ inputs.node-version-file }}
+          cache: yarn
+
+      - name: 📦 Dependências
+        if: steps.guard.outputs.skip != 'true'
+        run: yarn install --frozen-lockfile
+
+      - name: 🧩 MCP do Sentry (token só no env do servidor MCP)
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          SENTRY_ACCESS_TOKEN: ${{ secrets.SENTRY_ACCESS_TOKEN }}
+        run: |
+          cat > /tmp/mcp-config.json <<JSON
+          {
+            "mcpServers": {
+              "sentry": {
+                "command": "npx",
+                "args": ["-y", "@sentry/mcp-server@latest", "--skills=inspect"],
+                "env": { "SENTRY_ACCESS_TOKEN": "${SENTRY_ACCESS_TOKEN}" }
+              }
+            }
+          }
+          JSON
+
+      - name: 📝 Prompt
+        if: steps.guard.outputs.skip != 'true'
+        id: prompt
+        env:
+          TRIAGE_APP: ${{ inputs.app }}
+          TRIAGE_REPO: ${{ github.repository }}
+          TRIAGE_DEFAULT_BRANCH: ${{ inputs.default_branch }}
+          TRIAGE_ISSUE_ID: ${{ inputs.issue_id }}
+          TRIAGE_SEVERITY: ${{ inputs.severity }}
+          TRIAGE_PLATFORM: ${{ inputs.platform }}
+          TRIAGE_ENVIRONMENT: ${{ inputs.environment }}
+          TRIAGE_RELEASE: ${{ inputs.release }}
+          TRIAGE_WEB_URL: ${{ inputs.web_url }}
+          TRIAGE_TITLE: ${{ inputs.title }}
+          TRIAGE_DRY_RUN: ${{ inputs.dry_run }}
+          TRIAGE_SENTRY_ORG: ${{ inputs.sentry_org }}
+          TRIAGE_SENTRY_PROJECT: ${{ inputs.sentry_project }}
+        run: node .quality-gates/scripts/sentry-triage/build-prompt.mjs
+
+      - name: 🛠️ Ferramentas permitidas
+        if: steps.guard.outputs.skip != 'true'
+        id: tools
+        run: |
+          BASE="mcp__sentry__get_issue_details,mcp__sentry__find_releases,Read,Grep,Glob,Edit,Write,Bash(git status:*),Bash(git log:*),Bash(git blame:*),Bash(git diff:*),Bash(git merge-base:*),Bash(git checkout:*),Bash(git add:*),Bash(git commit:*),Bash(yarn typecheck),Bash(yarn lint),Bash(yarn test:*),Bash(yarn vitest:*)"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "allowed=$BASE" >> "$GITHUB_OUTPUT"
+          else
+            echo "allowed=$BASE,Bash(git push:*),Bash(gh pr create:*)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 🤖 Claude Code
+        if: steps.guard.outputs.skip != 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.TRIAGE_GITHUB_TOKEN }}
+          prompt: ${{ steps.prompt.outputs.prompt }}
+          track_progress: false
+          claude_args: |
+            --mcp-config /tmp/mcp-config.json
+            --model ${{ inputs.model }}
+            --max-turns ${{ inputs.max_turns }}
+            --allowedTools "${{ steps.tools.outputs.allowed }}"
+
+      - name: ✅ Validar triage-result.json
+        if: steps.guard.outputs.skip != 'true'
+        id: result
+        run: node .quality-gates/scripts/sentry-triage/validate-result.mjs triage-result.json
+
+      - name: 🗒️ Comentário no issue do Sentry
+        if: steps.guard.outputs.skip != 'true' && inputs.dry_run == false && steps.result.outcome == 'success'
+        env:
+          SENTRY_ACCESS_TOKEN: ${{ secrets.SENTRY_ACCESS_TOKEN }}
+        run: node .quality-gates/scripts/sentry-triage/post-sentry-comment.mjs triage-result.json
+
+      - name: 💬 Discord — resultado
+        if: always() && steps.guard.outputs.skip != 'true'
+        env:
+          TRIAGE_APP: ${{ inputs.app }}
+          TRIAGE_SEVERITY: ${{ inputs.severity }}
+          TRIAGE_WEB_URL: ${{ inputs.web_url }}
+          TRIAGE_FAILED: ${{ steps.result.outcome != 'success' }}
+        run: node .quality-gates/scripts/sentry-triage/post-discord.mjs triage-result.json
+
+      - name: 📎 Artefato
+        if: always() && steps.guard.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: triage-result-${{ inputs.issue_id }}
+          path: triage-result.json
+          if-no-files-found: ignore
+          retention-days: 30
