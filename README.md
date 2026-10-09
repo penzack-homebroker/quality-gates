@@ -8,6 +8,60 @@ Validações de qualidade de código compartilhadas entre os projetos frontend d
 
 Referência de implantação completa: HomeBroker FrontEnd (primeiro projeto a adotar — veja a seção *Quality Gates* do README de lá).
 
+## Triagem de erros do Sentry por IA (`sentry-triage.yml`)
+
+Workflow reutilizável disparado pelo relay [`sentry-ops`](https://github.com/penzack-homebroker/sentry-ops)
+(`repository_dispatch: sentry-triage`) ou à mão. Roda o
+[`claude-code-action`](https://github.com/anthropics/claude-code-action) com o Sentry MCP no
+repositório do app: lê o issue, analisa o código, grava `triage-result.json` (schema em
+`scripts/sentry-triage/triage-result.schema.json`) e passos determinísticos publicam o diagnóstico
+como comentário no issue e em `#sentry-ai-triage`. PR rascunho `fix/sentry-<id>-<slug>` só quando a
+correção é pequena e a confiança é alta.
+
+```yaml
+# .github/workflows/sentry-triage.yml no app
+on:
+  repository_dispatch: { types: [sentry-triage] }
+  workflow_dispatch: { inputs: { issue_id: { required: true, type: string }, dry_run: { type: boolean, default: true } } }
+concurrency: { group: sentry-triage-${{ github.event.client_payload.issue_id || inputs.issue_id }}, cancel-in-progress: false }
+permissions: { contents: write, pull-requests: write, issues: write, id-token: write }
+jobs:
+  triage:
+    uses: penzack-homebroker/quality-gates/.github/workflows/sentry-triage.yml@v0.5.0
+    with: { app: trader, default_branch: develop, sentry_project: homebroker-frontend, issue_id: ${{ github.event.client_payload.issue_id || inputs.issue_id }}, dry_run: ${{ inputs.dry_run || false }} }
+    secrets: { ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}, SENTRY_ACCESS_TOKEN: ${{ secrets.SENTRY_ACCESS_TOKEN }}, DISCORD_WEBHOOK_AI: ${{ secrets.DISCORD_WEBHOOK_AI }}, DISCORD_WEBHOOK_TEST: ${{ secrets.DISCORD_WEBHOOK_TEST }}, NPM_TOKEN: ${{ secrets.NPM_TOKEN }} }
+```
+
+Guardas: `concurrency` por issue, `already-triaged.mjs` (branch ou comentário `[sentry-triage]`
+existentes), `--max-turns`, `timeout-minutes: 25`, lista fechada de ferramentas (sem `gh pr create`
+em dry run). Segredos do Discord e do Sentry só aparecem nos passos determinísticos; o agente só vê
+o token do Sentry dentro do processo do MCP.
+
+**Política de PR (três faixas, decidida pelo agente e registrada em `pr.state`):** `ready` (PR
+pronto para revisão em `develop`, label `sentry-autofix`) quando a mudança é pequena (≤ ~60 linhas,
+≤ 3 arquivos), sem mudança de contrato, com typecheck/lint verdes, spec atualizado e confiança
+alta; `draft` quando falta o teste ou a confiança é média; `none` no resto (só diagnóstico e diff
+proposto). O merge continua humano. O relay pode mandar `category`/`fixability` da pré-classificação
+por IA; eles entram no prompt.
+
+**Fechamento do ciclo (`sentry-resolve.yml`):** no merge de um PR `fix/sentry-<id>-*`, o issue é
+marcado como resolvido na próxima release e recebe uma nota com o link do PR.
+
+```yaml
+# .github/workflows/sentry-resolve.yml no app
+on: { pull_request: { types: [closed] } }
+jobs:
+  resolve:
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'fix/sentry-')
+    uses: penzack-homebroker/quality-gates/.github/workflows/sentry-resolve.yml@v0.5.0
+    with: { head_ref: ${{ github.event.pull_request.head.ref }}, base_ref: ${{ github.event.pull_request.base.ref }}, pr_url: ${{ github.event.pull_request.html_url }} }
+    secrets: { SENTRY_ACCESS_TOKEN: ${{ secrets.SENTRY_ACCESS_TOKEN }} }
+```
+
+**Trocar o agente (ex.: Hermes):** o contrato é o prompt (`PROMPT.md`) na entrada e
+`triage-result.json` (schema) na saída. Só o passo `🤖 Claude Code` muda; guardas, validação,
+comentário no Sentry e Discord ficam iguais.
+
 ## Os gates
 
 | Gate | Ferramenta | Regra |
