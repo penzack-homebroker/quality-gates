@@ -3,53 +3,161 @@
   "title": "triage-result",
   "type": "object",
   "additionalProperties": false,
-  "required": ["issue_id", "severity", "app", "platform", "summary", "root_cause", "confidence", "affected_files", "impact", "pr", "diagnosis_md"],
+  "required": [
+    "issue_id",
+    "severity",
+    "app",
+    "platform",
+    "summary",
+    "root_cause",
+    "confidence",
+    "affected_files",
+    "impact",
+    "pr",
+    "diagnosis_md"
+  ],
   "properties": {
-    "issue_id": { "type": "string" },
-    "severity": { "enum": ["P0", "P1", "P2"] },
-    "app": { "type": "string" },
-    "platform": { "type": "string" },
-    "release": { "type": "string" },
-    "summary": { "type": "string", "maxLength": 300 },
-    "root_cause": { "type": "string", "maxLength": 1500 },
-    "confidence": { "enum": ["high", "medium", "low"] },
+    "issue_id": {
+      "type": "string"
+    },
+    "severity": {
+      "enum": [
+        "P0",
+        "P1",
+        "P2"
+      ]
+    },
+    "app": {
+      "type": "string"
+    },
+    "platform": {
+      "type": "string"
+    },
+    "release": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "root_cause": {
+      "type": "string",
+      "maxLength": 1500
+    },
+    "confidence": {
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ]
+    },
     "affected_files": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["path"],
-        "properties": { "path": { "type": "string" }, "lines": { "type": "string" } }
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "lines": {
+            "type": "string"
+          }
+        }
       }
     },
     "impact": {
       "type": "object",
       "properties": {
-        "platforms": { "type": "array", "items": { "type": "string" } },
-        "account_types": { "type": "array", "items": { "type": "string" } },
-        "flows": { "type": "array", "items": { "type": "string" } },
-        "users_affected": { "type": "integer" }
+        "platforms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "account_types": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flows": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "users_affected": {
+          "type": "integer"
+        }
       }
     },
-    "proposed_diff": { "type": "string", "maxLength": 20000 },
+    "proposed_diff": {
+      "type": "string",
+      "maxLength": 20000
+    },
     "pr": {
       "type": "object",
-      "required": ["created"],
+      "required": [
+        "created",
+        "state"
+      ],
       "properties": {
-        "created": { "type": "boolean" },
-        "url": { "type": "string" },
-        "branch": { "type": "string" },
-        "no_pr_reason": { "type": "string" }
+        "created": {
+          "type": "boolean"
+        },
+        "url": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "no_pr_reason": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "ready",
+            "draft",
+            "none"
+          ]
+        }
       }
     },
     "checks": {
       "type": "object",
       "properties": {
-        "typecheck": { "enum": ["pass", "fail", "skipped"] },
-        "lint": { "enum": ["pass", "fail", "skipped"] },
-        "tests": { "enum": ["pass", "fail", "skipped"] }
+        "typecheck": {
+          "enum": [
+            "pass",
+            "fail",
+            "skipped"
+          ]
+        },
+        "lint": {
+          "enum": [
+            "pass",
+            "fail",
+            "skipped"
+          ]
+        },
+        "tests": {
+          "enum": [
+            "pass",
+            "fail",
+            "skipped"
+          ]
+        }
       }
     },
-    "frames_mapped": { "type": "boolean" },
-    "diagnosis_md": { "type": "string", "maxLength": 12000 }
+    "frames_mapped": {
+      "type": "boolean"
+    },
+    "diagnosis_md": {
+      "type": "string",
+      "maxLength": 12000
+    }
   }
 }

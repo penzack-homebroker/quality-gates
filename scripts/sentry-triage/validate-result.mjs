@@ -71,7 +71,7 @@ if (errors.length > 0) {
 if (process.env.GITHUB_OUTPUT) {
   appendFileSync(
     process.env.GITHUB_OUTPUT,
-    `confidence=${result.confidence}\npr_created=${result.pr.created}\npr_url=${result.pr.url ?? ''}\n`
+    `confidence=${result.confidence}\npr_created=${result.pr.created}\npr_state=${result.pr.state}\npr_url=${result.pr.url ?? ''}\n`
   );
 }
-console.log(`triage-result.json ok · confidence=${result.confidence} · pr=${result.pr.created ? result.pr.url : 'no'}`);
+console.log(`triage-result.json ok · confidence=${result.confidence} · pr=${result.pr.state}${result.pr.created ? ` ${result.pr.url}` : ''}`);

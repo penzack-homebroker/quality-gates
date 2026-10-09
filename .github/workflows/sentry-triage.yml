@@ -45,6 +45,14 @@ on:
       title:
         type: string
         default: ''
+      category:
+        description: 'Pré-classificação do relay (app_bug | backend_contract | third_party | network | noise | unknown)'
+        type: string
+        default: ''
+      fixability:
+        description: 'Pré-classificação do relay (high | medium | low)'
+        type: string
+        default: ''
       dry_run:
         description: 'Sem PR, sem comentário no Sentry; Discord vai para o canal de teste'
         type: boolean
@@ -156,6 +164,8 @@ jobs:
           TRIAGE_RELEASE: ${{ inputs.release }}
           TRIAGE_WEB_URL: ${{ inputs.web_url }}
           TRIAGE_TITLE: ${{ inputs.title }}
+          TRIAGE_CATEGORY: ${{ inputs.category }}
+          TRIAGE_FIXABILITY: ${{ inputs.fixability }}
           TRIAGE_DRY_RUN: ${{ inputs.dry_run }}
           TRIAGE_SENTRY_ORG: ${{ inputs.sentry_org }}
           TRIAGE_SENTRY_PROJECT: ${{ inputs.sentry_project }}

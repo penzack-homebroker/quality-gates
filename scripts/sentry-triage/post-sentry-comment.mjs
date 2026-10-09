@@ -10,7 +10,9 @@ const runUrl = process.env.RUN_URL ?? '';
 
 const DIFF_LIMIT = 8000;
 const diff = result.proposed_diff ? `\n\n**Patch proposto**\n\n\`\`\`diff\n${String(result.proposed_diff).slice(0, DIFF_LIMIT)}\n\`\`\`` : '';
-const pr = result.pr?.created ? `\n\n**PR rascunho:** ${result.pr.url}` : `\n\n**Sem PR:** ${result.pr?.no_pr_reason ?? 'critérios não atendidos'}`;
+const pr = result.pr?.created
+  ? `\n\n**PR ${result.pr.state === 'ready' ? 'pronto para revisão' : 'rascunho'}:** ${result.pr.url}`
+  : `\n\n**Sem PR:** ${result.pr?.no_pr_reason ?? 'critérios não atendidos'}`;
 
 const text = `[sentry-triage] ${result.severity} · confiança ${result.confidence}\n\n${result.diagnosis_md}${diff}${pr}\n\n_Run: ${runUrl}_`;
 

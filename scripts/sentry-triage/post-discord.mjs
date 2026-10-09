@@ -23,7 +23,9 @@ const build = () => {
     return { title: `[${severity}] ${app} · triagem falhou`, color: COLORS[severity] ?? COLORS.grey, description: 'O agente não produziu um triage-result.json válido. Veja o run.', fields: [...field('Sentry', webUrl, false), ...field('Run', runUrl, false)] };
   }
   const result = JSON.parse(readFileSync(file, 'utf8'));
-  const prValue = result.pr?.created ? result.pr.url : `sem PR: ${result.pr?.no_pr_reason ?? 'critérios não atendidos'}`;
+  const prValue = result.pr?.created
+    ? `${result.pr.state === 'ready' ? 'pronto para revisão' : 'rascunho'}: ${result.pr.url}`
+    : `sem PR: ${result.pr?.no_pr_reason ?? 'critérios não atendidos'}`;
   const impact = [
     result.impact?.platforms?.length ? `plataformas: ${result.impact.platforms.join(', ')}` : '',
     result.impact?.account_types?.length ? `contas: ${result.impact.account_types.join(', ')}` : '',

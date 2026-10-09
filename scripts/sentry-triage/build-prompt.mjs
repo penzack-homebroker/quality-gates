@@ -17,6 +17,8 @@ const values = {
   release: process.env.TRIAGE_RELEASE || 'unknown',
   web_url: process.env.TRIAGE_WEB_URL || `https://${process.env.TRIAGE_SENTRY_ORG ?? 'penzack'}.sentry.io/issues/${process.env.TRIAGE_ISSUE_ID ?? ''}/`,
   title: process.env.TRIAGE_TITLE || '(sem título)',
+  category: process.env.TRIAGE_CATEGORY || 'unknown',
+  fixability: process.env.TRIAGE_FIXABILITY || 'unknown',
   dry_run: process.env.TRIAGE_DRY_RUN === 'true' ? 'true' : 'false',
   sentry_org: process.env.TRIAGE_SENTRY_ORG ?? 'penzack',
   sentry_project: process.env.TRIAGE_SENTRY_PROJECT ?? '',

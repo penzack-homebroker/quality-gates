@@ -37,6 +37,31 @@ existentes), `--max-turns`, `timeout-minutes: 25`, lista fechada de ferramentas 
 em dry run). Segredos do Discord e do Sentry só aparecem nos passos determinísticos; o agente só vê
 o token do Sentry dentro do processo do MCP.
 
+**Política de PR (três faixas, decidida pelo agente e registrada em `pr.state`):** `ready` (PR
+pronto para revisão em `develop`, label `sentry-autofix`) quando a mudança é pequena (≤ ~60 linhas,
+≤ 3 arquivos), sem mudança de contrato, com typecheck/lint verdes, spec atualizado e confiança
+alta; `draft` quando falta o teste ou a confiança é média; `none` no resto (só diagnóstico e diff
+proposto). O merge continua humano. O relay pode mandar `category`/`fixability` da pré-classificação
+por IA; eles entram no prompt.
+
+**Fechamento do ciclo (`sentry-resolve.yml`):** no merge de um PR `fix/sentry-<id>-*`, o issue é
+marcado como resolvido na próxima release e recebe uma nota com o link do PR.
+
+```yaml
+# .github/workflows/sentry-resolve.yml no app
+on: { pull_request: { types: [closed] } }
+jobs:
+  resolve:
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'fix/sentry-')
+    uses: penzack-homebroker/quality-gates/.github/workflows/sentry-resolve.yml@v0.5.0
+    with: { head_ref: ${{ github.event.pull_request.head.ref }}, base_ref: ${{ github.event.pull_request.base.ref }}, pr_url: ${{ github.event.pull_request.html_url }} }
+    secrets: { SENTRY_ACCESS_TOKEN: ${{ secrets.SENTRY_ACCESS_TOKEN }} }
+```
+
+**Trocar o agente (ex.: Hermes):** o contrato é o prompt (`PROMPT.md`) na entrada e
+`triage-result.json` (schema) na saída. Só o passo `🤖 Claude Code` muda; guardas, validação,
+comentário no Sentry e Discord ficam iguais.
+
 ## Os gates
 
 | Gate | Ferramenta | Regra |
